@@ -1,4 +1,4 @@
-# dmn-clj (決定表)
+# kotoba-lang/dmn
 
 [![CI](https://github.com/kotoba-lang/dmn/actions/workflows/ci.yml/badge.svg)](https://github.com/kotoba-lang/dmn/actions/workflows/ci.yml)
 
@@ -10,15 +10,12 @@ library adds the graph queries, structural validation, and a pure evaluator arou
 it.
 
 Natural delegation target for a BPMN `business-rule-task` — sibling of
-[bpmn-clj](https://github.com/com-junkawasaki/bpmn-clj) in this org.
+[`kotoba-lang/bpmn`](https://github.com/kotoba-lang/bpmn).
 
-## Why a shared library (org placement)
+## Why a shared library
 
-Per the three-org rule, the **reusable** decision model lives in **com-junkawasaki**;
-**public-benefit actor instances** that drive concrete decision services live in
-**etzhayyim**; any **business/private deployment** lives in **gftdcojp**. dmn-clj is
-the dep — it carries no domain rules and no engine bindings (those are host-injected
-ports).
+The reusable decision model lives in `kotoba-lang/dmn`. It carries no domain
+rules and no engine bindings; those remain host-injected ports.
 
 ## The model: DRG as EDN (`dmn.model`)
 
@@ -115,5 +112,5 @@ number/string/boolean equality. Replace with a FEEL engine for production use.
 ## Test
 
 ```
-clojure -X:test
+clojure -M:test
 ```
