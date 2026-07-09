@@ -243,3 +243,45 @@
                   (m/add-decision (m/decision "a" {:requires ["ghost"]})))]
       (is (not (v/valid? drg)))
       (is (some #(= :decision/unknown-requires (:dmn/code %)) (v/problems drg))))))
+
+;; ---------------------------------------------------------------------------
+;; Test 13 — a decision requiring a :collect dependency sees its output too,
+;; not just decisions requiring single-output (:unique/:first/:any/:priority)
+;; dependencies. A single matched rule merges as a scalar so a downstream
+;; comparator can use it directly; more than one match merges as a vector.
+;; ---------------------------------------------------------------------------
+
+(defn collect-dep-drg
+  "'eligible' (:collect, single match) feeds 'total' (:first)."
+  []
+  (-> (m/drg "shop-collect")
+      (m/add-decision (m/decision "eligible" {:hit-policy :collect}))
+      (m/add-input  "eligible" "i1" {:label "member" :expr "member"})
+      (m/add-output "eligible" "o1" {:label "pct"})
+      (m/add-rule   "eligible" "r1" ["true"] [10])
+      (m/add-decision (m/decision "total" {:hit-policy :first :requires ["eligible"]}))
+      (m/add-input  "total" "i2" {:label "pctcheck" :expr "pct"})
+      (m/add-output "total" "o2" {:label "applied"})
+      (m/add-rule   "total" "r2" [">= 10"] ["discount-applied"])
+      (m/add-rule   "total" "r3" ["-"]     ["no-discount"])))
+
+(deftest requires-merges-single-collect-match-as-scalar
+  (let [drg (collect-dep-drg)
+        r   (e/evaluate (e/default-ports) drg "total" {:member true})]
+    (is (= 10 (:pct (:dmn/context r))))
+    (is (= ["r2"] (:dmn/matched r)))
+    (is (= "discount-applied" (:applied (:dmn/outputs r))))))
+
+(deftest requires-merges-multiple-collect-matches-as-vector
+  (let [drg (-> (m/drg "shop-collect-multi")
+                (m/add-decision (m/decision "bonuses" {:hit-policy :collect}))
+                (m/add-input  "bonuses" "i1" {:label "x" :expr "x"})
+                (m/add-output "bonuses" "o1" {:label "amt"})
+                (m/add-rule   "bonuses" "r1" ["-"] [5])
+                (m/add-rule   "bonuses" "r2" ["-"] [7])
+                (m/add-decision (m/decision "seen" {:hit-policy :unique :requires ["bonuses"]}))
+                (m/add-input  "seen" "i2" {:label "amtcheck" :expr "amt"})
+                (m/add-output "seen" "o2" {:label "ok"})
+                (m/add-rule   "seen" "r3" ["-"] [true]))
+        r   (e/evaluate (e/default-ports) drg "seen" {:x true})]
+    (is (= [5 7] (:amt (:dmn/context r))))))

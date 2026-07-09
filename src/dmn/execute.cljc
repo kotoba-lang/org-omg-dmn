@@ -98,10 +98,38 @@
         matched (filter #(match-rule? ports % iv) rls)]
     (apply-hit-policy hp outs matched)))
 
+(defn- merge-dep-outputs
+  "Merge a dependency's :dmn/outputs into ctx. Single-output hit policies
+  (:unique/:first/:any/:priority) merge their output map directly.
+  Multi-output hit policies (:collect/:rule-order) return a vector of per-rule
+  output maps: exactly one matched rule merges its output map directly (same
+  as a single-output policy, so downstream rules can compare against it as a
+  scalar); more than one matched rule merges each output column as a vector
+  of that column's value across all matches, since there is no single scalar
+  to hand a downstream rule. Either way, a decision requiring a
+  :collect/:rule-order dependency can now see its results instead of the key
+  being silently absent from context."
+  [ctx outputs]
+  (cond
+    (map? outputs)
+    (merge ctx outputs)
+
+    (and (vector? outputs) (= 1 (count outputs)))
+    (merge ctx (first outputs))
+
+    (vector? outputs)
+    (reduce (fn [ctx k] (assoc ctx k (mapv #(get % k) outputs)))
+            ctx
+            (into #{} (mapcat keys) outputs))
+
+    :else ctx))
+
 (defn evaluate
   "Evaluate decision `dec-id` in `graph` against `context` using `ports`.
   Required decisions are evaluated first in topological order, each merging its
-  single-output map into the context. Returns:
+  outputs into the context (single-output hit policies merge their output map
+  directly; :collect/:rule-order merge each output column as a vector of
+  per-matched-rule values). Returns:
     {:dmn/outputs … :dmn/matched [rule-ids] :dmn/context context'}"
   [ports graph dec-id context]
   (let [order (m/topo-order graph dec-id)
@@ -110,10 +138,7 @@
         ctx'  (reduce
                (fn [ctx dep-id]
                  (let [res (evaluate-one ports graph dep-id ctx)]
-                   ;; only merge single-output maps (not vectors from :collect)
-                   (if (and (:dmn/outputs res) (map? (:dmn/outputs res)))
-                     (merge ctx (:dmn/outputs res))
-                     ctx)))
+                   (merge-dep-outputs ctx (:dmn/outputs res))))
                context
                deps)
         ;; evaluate the target decision against the enriched context
