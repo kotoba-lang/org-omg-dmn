@@ -14,7 +14,7 @@
     :collect    — all matching rules; outputs is a vector of output maps
     :priority   — first matching rule (priority is table-row order here)
     :rule-order — all matching rules in row order; outputs is a vector of output maps"
-  (:require [clojure.string :as str]
+  (:require [kotoba.lang.text :as str]
             [dmn.model :as m]
             [dmn.ports :as p]))
 
