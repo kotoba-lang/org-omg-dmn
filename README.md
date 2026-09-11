@@ -112,5 +112,5 @@ number/string/boolean equality. Replace with a FEEL engine for production use.
 ## Test
 
 ```
-clojure -M:test
+kbb -M:test
 ```
