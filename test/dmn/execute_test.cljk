@@ -1,5 +1,5 @@
 (ns dmn.execute-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [kotoba.test :refer [deftest is testing]]
             [dmn.model    :as m]
             [dmn.validate :as v]
             [dmn.execute  :as e]))
